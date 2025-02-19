@@ -1,0 +1,14 @@
+openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+@erc3643/contracts/=lib/T-REX/contracts/
+@onchain-id/=lib/T-REX/node_modules/@onchain-id/
+T-REX/=lib/T-REX/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
+eth-gas-reporter/=lib/T-REX/node_modules/eth-gas-reporter/
+forge-std/=lib/forge-std/src/
+halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/
+hardhat/=lib/T-REX/node_modules/hardhat/
+ds-test/=lib/openzeppelin-contracts/lib/forge-std/lib/ds-test/src/
+openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
+openzeppelin/=lib/openzeppelin-contracts-upgradeable/contracts/
