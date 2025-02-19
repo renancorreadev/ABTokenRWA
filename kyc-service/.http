@@ -1,0 +1,27 @@
+# Criar um novo KYC (POST)
+POST http://localhost:8080/kyc
+Content-Type: application/json
+
+{
+    "user_email": "user@example.com",
+    "identity_hash": "abcdef123456",
+    "status": "pending"
+}
+
+###
+
+# Buscar um KYC por e-mail (GET)
+GET http://localhost:8080/kyc/user@example.com
+Accept: application/json
+
+###
+
+# Atualizar o status de um KYC (PUT)
+PUT http://localhost:8080/kyc/user@example.com/approved
+Accept: application/json
+
+###
+
+# Teste de rota inválida (GET)
+GET http://localhost:8080/invalid_route
+Accept: application/json

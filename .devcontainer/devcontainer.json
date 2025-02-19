@@ -1,0 +1,16 @@
+{
+  "name": "Blockchain Development",
+  "image": "skynance/foundryup-node",
+  "features": {},
+  "postCreateCommand": "",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-tslint-plugin",
+        "angular.ng-template",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}

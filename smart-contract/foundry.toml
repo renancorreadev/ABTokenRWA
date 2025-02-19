@@ -1,0 +1,19 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.17"
+auto_detect_solc = true
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "@erc3643/contracts/=lib/T-REX/contracts/",
+  "T-REX/=lib/T-REX/contracts/"
+]
+
+[profile.trex]
+solc_version = "0.8.17"
+src = "lib/T-REX/"
+
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
