@@ -14,4 +14,5 @@ pub trait KYCService {
     async fn create_kyc_entry(&self, entry: NewKYCEntry) -> Result<KYCEntry, String>;
     async fn get_kyc_by_email(&self, email: String) -> Result<Option<KYCEntry>, String>;
     async fn update_kyc_status(&self, email: String, status: String) -> Result<KYCEntry, String>;
+    async fn delete_kyc_by_email(&self, email: String) -> Result<(), String>;
 }

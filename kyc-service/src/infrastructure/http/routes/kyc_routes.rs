@@ -31,7 +31,13 @@ pub fn kyc_routes(
         .and(kyc_service.clone())
         .and_then(handle_update_kyc);
 
-    create_kyc.or(get_kyc).or(update_kyc)
+    // Rota para deletar KYC pelo email
+    let delete_kyc = warp::delete()
+        .and(warp::path!("kyc" / String))
+        .and(kyc_service.clone())
+        .and_then(handle_delete_kyc);
+
+    create_kyc.or(get_kyc).or(update_kyc).or(delete_kyc)
 }
 
 /// Handler para criar um novo KYC com validações aprimoradas e logs
@@ -153,5 +159,22 @@ async fn handle_update_kyc(
                 StatusCode::INTERNAL_SERVER_ERROR,
             ))
         }
+    }
+}
+
+/// Handler para deletar um KYC pelo email
+async fn handle_delete_kyc(
+    email: String,
+    service: Arc<dyn KYCService + Send + Sync>,
+) -> Result<impl Reply, Rejection> {
+    match service.delete_kyc_by_email(email).await {
+        Ok(_) => Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"message": "KYC deletado com sucesso"})),
+            StatusCode::OK,
+        )),
+        Err(e) => Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"error": e})),
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )),
     }
 }

@@ -12,10 +12,17 @@ use adapters::kyc_adapter::KYCAdapter;
 use infrastructure::database::connection::init_db;
 use infrastructure::http::routes::kyc_routes::kyc_routes;
 
+use tracing::info;
+use tracing_subscriber;
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
     env_logger::init();
+
+    if tracing_subscriber::fmt().try_init().is_err() {
+        eprintln!("⚠️ Logger já inicializado, ignorando...");
+    }
 
     // Inicializa o banco de dados
     let db_pool = match init_db() {
@@ -33,6 +40,6 @@ async fn main() {
     let routes = kyc_routes(kyc_service).with(warp::log("kyc_service"));
 
     // Inicia o servidor
-    println!("🚀 Servidor rodando em http://localhost:8080");
+    info!("🚀 Servidor rodando...");
     warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
 }

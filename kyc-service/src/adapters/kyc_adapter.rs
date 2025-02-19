@@ -4,9 +4,9 @@ use crate::infrastructure::database::connection::DbPool;
 use crate::infrastructure::database::schema::kyc_entries;
 use async_trait::async_trait;
 use diesel::prelude::*;
-use log::{error, info, warn};
 use std::sync::Arc;
 use tokio::task;
+use tracing::{error, info}; // Logging
 
 /// Implementação concreta do serviço de KYC
 pub struct KYCAdapter {
@@ -14,7 +14,6 @@ pub struct KYCAdapter {
 }
 
 impl KYCAdapter {
-    /// Cria uma nova instância do `KYCAdapter`
     pub fn new(db_pool: Arc<DbPool>) -> Self {
         Self { db_pool }
     }
@@ -22,94 +21,111 @@ impl KYCAdapter {
 
 #[async_trait]
 impl KYCService for KYCAdapter {
-    /// Insere um novo registro de KYC no banco de dados com validações e logs
+    /// Insere um novo registro de KYC no banco de dados
     async fn create_kyc_entry(&self, entry: NewKYCEntry) -> Result<KYCEntry, String> {
         let db_pool = Arc::clone(&self.db_pool);
+        let entry_clone = entry.clone(); // 🔹 Clone para evitar borrow após move
 
-        // Validações antes de inserir
-        if entry.user_email.trim().is_empty() || entry.identity_hash.trim().is_empty() {
-            warn!("Tentativa de criação de KYC com campos vazios.");
-            return Err("Email e hash de identidade são obrigatórios.".to_string());
-        }
+        info!("Criando novo KYC para usuário: {}", entry_clone.user_email);
 
-        info!("Criando novo KYC para: {}", entry.user_email);
-
-        task::spawn_blocking(move || {
+        let result = task::spawn_blocking(move || {
             let mut conn = db_pool
                 .get()
                 .map_err(|e| format!("Erro ao obter conexão: {}", e))?;
 
             diesel::insert_into(kyc_entries::table)
-                .values(&entry)
+                .values(entry_clone)
                 .get_result::<KYCEntry>(&mut conn)
-                .map_err(|e| {
-                    error!("Erro ao inserir KYC para {}: {}", entry.user_email, e);
-                    format!("Erro ao inserir KYC: {}", e)
-                })
+                .map_err(|e| format!("Erro ao inserir KYC: {}", e))
         })
         .await
-        .map_err(|e| format!("Erro assíncrono: {}", e))?
-    }
+        .map_err(|e| format!("Erro assíncrono: {}", e))?;
 
-    /// Busca um registro de KYC pelo e-mail com logs detalhados
-    async fn get_kyc_by_email(&self, email: String) -> Result<Option<KYCEntry>, String> {
-        let db_pool = Arc::clone(&self.db_pool);
-
-        if email.trim().is_empty() {
-            warn!("Tentativa de busca de KYC com email vazio.");
-            return Err("Email não pode ser vazio.".to_string());
+        match &result {
+            Ok(kyc) => info!("KYC criado com sucesso: {:?}", kyc),
+            Err(e) => error!("Erro ao criar KYC: {}", e),
         }
 
-        info!("Buscando KYC para: {}", email);
+        result
+    }
 
-        task::spawn_blocking(move || {
+    /// Busca um registro de KYC pelo e-mail
+    async fn get_kyc_by_email(&self, email: String) -> Result<Option<KYCEntry>, String> {
+        let db_pool = Arc::clone(&self.db_pool);
+        info!("Buscando KYC para email: {}", email);
+
+        let result = task::spawn_blocking(move || {
             let mut conn = db_pool
                 .get()
                 .map_err(|e| format!("Erro ao obter conexão: {}", e))?;
 
             kyc_entries::table
-                .filter(kyc_entries::user_email.eq(email.clone()))
+                .filter(kyc_entries::user_email.eq(email))
                 .first::<KYCEntry>(&mut conn)
                 .optional()
-                .map_err(|e| {
-                    error!("Erro ao buscar KYC para {}: {}", email, e);
-                    format!("Erro ao buscar KYC: {}", e)
-                })
+                .map_err(|e| format!("Erro ao buscar KYC: {}", e))
         })
         .await
-        .map_err(|e| format!("Erro assíncrono: {}", e))?
+        .map_err(|e| format!("Erro assíncrono: {}", e))?;
+
+        match &result {
+            Ok(Some(kyc)) => info!("KYC encontrado: {:?}", kyc),
+            Ok(None) => info!("Nenhum KYC encontrado"),
+            Err(e) => error!("Erro ao buscar KYC: {}", e),
+        }
+
+        result
     }
 
-    /// Atualiza o status de um KYC pelo e-mail
+    /// Atualiza o status de um KYC
     async fn update_kyc_status(&self, email: String, status: String) -> Result<KYCEntry, String> {
         let db_pool = Arc::clone(&self.db_pool);
+        info!(
+            "Atualizando status de KYC para email: {} -> {}",
+            email, status
+        );
 
-        if email.trim().is_empty() {
-            warn!("Tentativa de atualização de KYC com email vazio.");
-            return Err("Email não pode ser vazio.".to_string());
+        let result = task::spawn_blocking(move || {
+            let mut conn = db_pool
+                .get()
+                .map_err(|e| format!("Erro ao obter conexão: {}", e))?;
+
+            diesel::update(kyc_entries::table.filter(kyc_entries::user_email.eq(email)))
+                .set(kyc_entries::status.eq(status))
+                .get_result::<KYCEntry>(&mut conn)
+                .map_err(|e| format!("Erro ao atualizar KYC: {}", e))
+        })
+        .await
+        .map_err(|e| format!("Erro assíncrono: {}", e))?;
+
+        match &result {
+            Ok(kyc) => info!("KYC atualizado com sucesso: {:?}", kyc),
+            Err(e) => error!("Erro ao atualizar KYC: {}", e),
         }
 
-        if status.trim().is_empty() {
-            warn!("Tentativa de atualização de KYC sem status informado.");
-            return Err("Status não pode ser vazio.".to_string());
-        }
+        result
+    }
 
-        info!("Atualizando status do KYC para {} -> {}", email, status);
+    async fn delete_kyc_by_email(&self, email: String) -> Result<(), String> {
+        let db_pool = Arc::clone(&self.db_pool);
 
         task::spawn_blocking(move || {
             let mut conn = db_pool
                 .get()
                 .map_err(|e| format!("Erro ao obter conexão: {}", e))?;
 
-            diesel::update(kyc_entries::table.filter(kyc_entries::user_email.eq(email.clone())))
-                .set(kyc_entries::status.eq(status.clone()))
-                .get_result::<KYCEntry>(&mut conn)
-                .map_err(|e| {
-                    error!("Erro ao atualizar status do KYC para {}: {}", email, e);
-                    format!("Erro ao atualizar status: {}", e)
-                })
+            let deleted_rows =
+                diesel::delete(kyc_entries::table.filter(kyc_entries::user_email.eq(email)))
+                    .execute(&mut conn)
+                    .map_err(|e| format!("Erro ao excluir KYC: {}", e))?;
+
+            if deleted_rows == 0 {
+                Err("Nenhum registro encontrado para deletar".to_string())
+            } else {
+                Ok(())
+            }
         })
         .await
-        .map_err(|e| format!("Erro assíncrono: {}", e))?
+        .map_err(|e| format!("Erro na execução assíncrona: {}", e))?
     }
 }
