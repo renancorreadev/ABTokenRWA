@@ -17,3 +17,5 @@ uuid = { version = "1", features = ["serde", "v4"] }
 jsonwebtoken = "9"       # Para JWT
 log = "0.4"
 env_logger = "0.10"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
