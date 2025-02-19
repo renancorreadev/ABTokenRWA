@@ -4,7 +4,7 @@ use diesel::prelude::*;
 
 /// Representa um registro de KYC no banco de dados.
 #[derive(Queryable, Identifiable, Debug)]
-#[table_name = "kyc_entries"]
+#[diesel(table_name = kyc_entries)]
 pub struct KYCEntry {
     pub id: i32,
     pub user_email: String,
@@ -16,7 +16,7 @@ pub struct KYCEntry {
 
 /// Modelo para inserir um novo KYCEntry.
 #[derive(Insertable)]
-#[table_name = "kyc_entries"]
+#[diesel(table_name = kyc_entries)]
 pub struct NewKYCEntry {
     pub user_email: String,
     pub identity_hash: String,

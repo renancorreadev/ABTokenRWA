@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize}; // ADICIONE ESTA LINHA
 
 /// Representa um registro de KYC no banco de dados.
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Identifiable)]
-#[table_name = "kyc_entries"]
+#[diesel(table_name = kyc_entries)]
 pub struct KYCEntry {
     pub id: i32,
     pub user_email: String,
@@ -17,7 +17,7 @@ pub struct KYCEntry {
 
 /// Modelo para inserir um novo KYCEntry.
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
-#[table_name = "kyc_entries"]
+#[diesel(table_name = kyc_entries)]
 pub struct NewKYCEntry {
     pub user_email: String,
     pub identity_hash: String,

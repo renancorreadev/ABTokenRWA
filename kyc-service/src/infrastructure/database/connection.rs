@@ -20,6 +20,7 @@ pub fn init_db() -> Result<DbPool, String> {
 }
 
 /// Obtém uma conexão do pool.
+#[allow(dead_code)]
 pub fn get_connection(
     pool: &DbPool,
 ) -> Result<PooledConnection<ConnectionManager<PgConnection>>, String> {

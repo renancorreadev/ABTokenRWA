@@ -1,5 +1,5 @@
 use crate::application::kyc_service::KYCService;
-use crate::domain::kyc_model::{KYCEntry, NewKYCEntry};
+use crate::domain::kyc_model::NewKYCEntry;
 use serde_json::json;
 use std::sync::Arc;
 use warp::{http::StatusCode, Filter, Rejection, Reply};
