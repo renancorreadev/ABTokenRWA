@@ -1,18 +1,21 @@
 use dotenv::dotenv;
+use env_logger;
 use std::sync::Arc;
 use warp::Filter;
 
+mod adapters;
 mod application;
 mod domain;
 mod infrastructure;
 
+use adapters::kyc_adapter::KYCAdapter;
 use infrastructure::database::connection::init_db;
 use infrastructure::http::routes::kyc_routes::kyc_routes;
-use infrastructure::kyc_service_impl::KYCServiceImpl;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    env_logger::init();
 
     // Inicializa o banco de dados
     let db_pool = match init_db() {
@@ -23,8 +26,8 @@ async fn main() {
         }
     };
 
-    // Instancia o serviço de KYC
-    let kyc_service = Arc::new(KYCServiceImpl::new(db_pool.clone()));
+    // Instancia o serviço de KYC usando o Adapter
+    let kyc_service = Arc::new(KYCAdapter::new(db_pool.clone()));
 
     // Configura as rotas
     let routes = kyc_routes(kyc_service).with(warp::log("kyc_service"));

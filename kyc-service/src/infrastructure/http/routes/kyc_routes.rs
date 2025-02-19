@@ -1,5 +1,6 @@
 use crate::application::kyc_service::KYCService;
 use crate::domain::kyc_model::NewKYCEntry;
+use log::{error, info, warn};
 use serde_json::json;
 use std::sync::Arc;
 use warp::{http::StatusCode, Filter, Rejection, Reply};
@@ -14,20 +15,17 @@ pub fn kyc_routes(
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let kyc_service = warp::any().map(move || Arc::clone(&kyc_service));
 
-    // Rota para criar um novo KYC
     let create_kyc = warp::post()
         .and(warp::path("kyc"))
         .and(warp::body::json())
         .and(kyc_service.clone())
         .and_then(handle_create_kyc);
 
-    // Rota para obter KYC pelo email
     let get_kyc = warp::get()
         .and(warp::path!("kyc" / String))
         .and(kyc_service.clone())
         .and_then(handle_get_kyc);
 
-    // Rota para atualizar o status do KYC
     let update_kyc = warp::put()
         .and(warp::path!("kyc" / String / String))
         .and(kyc_service.clone())
@@ -36,58 +34,124 @@ pub fn kyc_routes(
     create_kyc.or(get_kyc).or(update_kyc)
 }
 
-/// Handler para criar um novo KYC
+/// Handler para criar um novo KYC com validações aprimoradas e logs
 async fn handle_create_kyc(
     entry: NewKYCEntry,
     service: Arc<dyn KYCService + Send + Sync>,
 ) -> Result<impl Reply, Rejection> {
+    // Validações antes da criação
+    if entry.user_email.trim().is_empty() || entry.identity_hash.trim().is_empty() {
+        warn!("Tentativa de criação de KYC com campos vazios");
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"error": "Email e hash de identidade são obrigatórios"})),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    info!("Criando novo KYC para: {}", entry.user_email);
+
     match service.create_kyc_entry(entry).await {
-        Ok(created) => Ok(warp::reply::with_status(
-            warp::reply::json(&created),
-            StatusCode::CREATED,
-        )),
-        Err(e) => Ok(warp::reply::with_status(
-            warp::reply::json(&json!({"error": e})),
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )),
+        Ok(created) => {
+            info!("KYC criado com sucesso para: {}", created.user_email);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&created),
+                StatusCode::CREATED,
+            ))
+        }
+        Err(e) => {
+            error!("Erro ao criar KYC: {}", e);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&json!({"error": "Erro interno ao processar a requisição"})),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
     }
 }
 
-/// Handler para buscar KYC por email
+/// Handler para buscar KYC por email com logs estruturados
 async fn handle_get_kyc(
     email: String,
     service: Arc<dyn KYCService + Send + Sync>,
 ) -> Result<impl Reply, Rejection> {
-    match service.get_kyc_by_email(email).await {
-        Ok(Some(kyc)) => Ok(warp::reply::with_status(
-            warp::reply::json(&kyc),
-            StatusCode::OK,
-        )),
-        Ok(None) => Ok(warp::reply::with_status(
-            warp::reply::json(&json!({"error": "Not found"})),
-            StatusCode::NOT_FOUND,
-        )),
-        Err(e) => Ok(warp::reply::with_status(
-            warp::reply::json(&json!({"error": e})),
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )),
+    if email.trim().is_empty() {
+        warn!("Tentativa de busca de KYC com email vazio");
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"error": "Email não pode ser vazio"})),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    info!("Buscando KYC para: {}", email);
+
+    match service.get_kyc_by_email(email.clone()).await {
+        Ok(Some(kyc)) => {
+            info!("KYC encontrado para: {}", email);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&kyc),
+                StatusCode::OK,
+            ))
+        }
+        Ok(None) => {
+            warn!("Nenhum KYC encontrado para: {}", email);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&json!({"error": "KYC não encontrado"})),
+                StatusCode::NOT_FOUND,
+            ))
+        }
+        Err(e) => {
+            error!("Erro ao buscar KYC para {}: {}", email, e);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&json!({"error": "Erro interno ao buscar KYC"})),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
     }
 }
 
-/// Handler para atualizar status do KYC
+/// Handler para atualizar status do KYC com logs detalhados
 async fn handle_update_kyc(
     email: String,
     status: String,
     service: Arc<dyn KYCService + Send + Sync>,
 ) -> Result<impl Reply, Rejection> {
-    match service.update_kyc_status(email, status).await {
-        Ok(updated) => Ok(warp::reply::with_status(
-            warp::reply::json(&updated),
-            StatusCode::OK,
-        )),
-        Err(e) => Ok(warp::reply::with_status(
-            warp::reply::json(&json!({"error": e})),
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )),
+    if email.trim().is_empty() {
+        warn!("Tentativa de atualização de KYC com email vazio");
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"error": "Email não pode ser vazio"})),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    if status.trim().is_empty() {
+        warn!("Tentativa de atualização de KYC sem status informado");
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&json!({"error": "Status não pode ser vazio"})),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    info!("Atualizando status do KYC para: {} -> {}", email, status);
+
+    match service
+        .update_kyc_status(email.clone(), status.clone())
+        .await
+    {
+        Ok(updated) => {
+            info!(
+                "Status do KYC atualizado com sucesso para {} -> {}",
+                email, status
+            );
+            Ok(warp::reply::with_status(
+                warp::reply::json(&updated),
+                StatusCode::OK,
+            ))
+        }
+        Err(e) => {
+            error!("Erro ao atualizar status do KYC para {}: {}", email, e);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&json!({"error": "Erro interno ao atualizar status do KYC"})),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
     }
 }

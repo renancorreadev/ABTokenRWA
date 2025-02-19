@@ -3,15 +3,15 @@ POST http://localhost:8080/kyc
 Content-Type: application/json
 
 {
-    "user_email": "user@example.com",
-    "identity_hash": "abcdef123456",
+    "user_email": "nanexample.com",
+    "identity_hash": "342432ccxsxsxsdxsfgcb",
     "status": "pending"
 }
 
 ###
 
 # Buscar um KYC por e-mail (GET)
-GET http://localhost:8080/kyc/user@example.com
+GET http://localhost:8080/kyc/nan@example.com
 Accept: application/json
 
 ###
