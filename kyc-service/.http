@@ -3,7 +3,7 @@ POST http://localhost:8080/kyc
 Content-Type: application/json
 
 {
-    "user_email": "nanexample.com",
+    "user_email": "user@example.com",
     "identity_hash": "342432ccxsxsxsdxsfgcb",
     "status": "pending"
 }
@@ -24,4 +24,10 @@ Accept: application/json
 
 # Teste de rota inválida (GET)
 GET http://localhost:8080/invalid_route
+Accept: application/json
+
+
+###
+# Deletar um KYC por e-mail (DELETE)
+DELETE http://localhost:8080/kyc/user@example.com
 Accept: application/json
